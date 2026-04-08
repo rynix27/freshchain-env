@@ -134,6 +134,36 @@ RESPOND WITH ONLY A JSON OBJECT. No text before or after."""
 # ─────────────────────────────────────────────
 
 def run_task(task_id: str, max_steps: int = 20) -> float:
+    obs = env_reset(task_id)
+    
+    # ADD THIS
+    print(f"[START] task={task_id}", flush=True)
+
+    for step_num in range(max_steps):
+        if obs.get("done"):
+            break
+
+        # ... your existing LLM action logic ...
+
+        result = env_step(action)
+        obs = result.get("observation", result)
+        reward = result.get("reward", 0.0)
+
+        # ADD THIS
+        print(f"[STEP] step={step_num+1} reward={reward:.4f}", flush=True)
+
+        if obs.get("done"):
+            break
+
+    grade_result = env_grade()
+    score = grade_result.get("score", 0.0)
+    steps = grade_result.get("steps_used", step_num + 1)
+
+    # ADD THIS
+    print(f"[END] task={task_id} score={score:.4f} steps={steps}", flush=True)
+
+    return score
+def run_task(task_id: str, max_steps: int = 20) -> float:
     """
     Run one full episode of the given task.
     
