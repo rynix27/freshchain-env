@@ -82,7 +82,22 @@ def root():
         "reward": "positive for saving yield, negative for spoilage and poor decisions",
         "endpoints": ["/reset", "/step", "/state", "/grade", "/health", "/web", "/tasks", "/alerts"],
     }
+@app.get("/alerts/recent")
+def get_recent_alerts(n: int = 5):
 
+  @app.post("/grade")
+def grade():
+    """Return final score for the current episode (0.0 to 1.0)."""
+    score = env.grade()
+    return {
+        "score": score,
+        "yield_saved_kg": env._total_saved,
+        "yield_lost_kg": env._total_lost,
+        "episode_id": env.state.episode_id,
+    }
+    return {"alerts": alert_system.get_recent(n)}
+    """Return final score for the current episode (0.0 to 1.0)."""
+    score = env.grade()
 
 @app.get("/health")
 def health():
