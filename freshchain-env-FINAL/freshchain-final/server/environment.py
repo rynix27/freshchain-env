@@ -13,7 +13,7 @@ from models import (
     FreshChainObservation, FreshChainAction, FreshChainState,
     BatchInfo, TruckInfo
 )
-from server.whatsapp_alerts import WhatsAppAlertSystem, AlertType
+from whatsapp_alerts import WhatsAppAlertSystem, AlertType
 
 alert_system = WhatsAppAlertSystem()
 
@@ -388,21 +388,18 @@ class FreshChainEnvironment:
 
     def grade(self) -> float:
         """
-        Final task score from 0.0 to 1.0.
-        Based on what fraction of total yield was saved vs lost.
-        Partial credit for partial saves.
+        Final task score strictly between 0.001 and 0.999.
+        Validator requires exclusive range (not 0.0, not 1.0).
         """
         total = self._total_saved + self._total_lost
         if total == 0:
-            return 0.0
+            return 0.001
         base_score = self._total_saved / total
-
-        # Bonus: finishing before max steps = efficiency bonus
         steps_used = self._state.step_count
         max_steps = self._state.max_steps
-        efficiency_bonus = max(0, (max_steps - steps_used) / max_steps) * 0.1
-
-        return round(min(1.0, base_score + efficiency_bonus), 3)
+        efficiency_bonus = max(0, (max_steps - steps_used) / max_steps) * 0.08
+        raw = base_score + efficiency_bonus
+        return round(max(0.001, min(0.999, raw)), 3)
 
     # ─────────────────────────────────────────────
     # BUILD OBSERVATION
