@@ -1,6 +1,5 @@
 ---
 title: FreshChain Post-Harvest Yield Loss Environment
-emoji: 🌾
 colorFrom: green
 colorTo: yellow
 sdk: docker
@@ -15,14 +14,14 @@ tags:
   - rl-environment
 ---
 
-# 🌾 FreshChain — Post-Harvest Yield Loss Prevention Environment
+#  FreshChain — Post-Harvest Yield Loss Prevention Environment
 
 > **Meta PyTorch OpenEnv Hackathon × SST India AI Hackathon 2026**  
 > An OpenEnv-compatible Reinforcement Learning environment for real-world agricultural logistics.
 
 ---
 
-## 🧭 Overview & Motivation
+##  Overview & Motivation
 
 India loses **30–40% of all fruits and vegetables post-harvest** — roughly **₹92,000 crore per year**. Around 60% of this loss is caused by poor logistics decisions: wrong timing, wrong routing, missed markets.
 
@@ -34,7 +33,7 @@ An AI agent controls a cold-chain warehouse and must make real-time decisions ab
 
 ---
 
-## 🤖 What Is an RL Environment?
+##  What Is an RL Environment?
 
 This is a **Reinforcement Learning environment** following the OpenEnv specification:
 
@@ -59,7 +58,7 @@ The agent interacts with the environment step-by-step until the episode ends, ac
 
 ---
 
-## 👁️ Observation Space — What the Agent Sees
+##  Observation Space — What the Agent Sees
 
 After every action, the agent receives a **FreshChainObservation** (Pydantic model):
 
@@ -91,7 +90,7 @@ After every action, the agent receives a **FreshChainObservation** (Pydantic mod
 
 ---
 
-## 🎮 Action Space — What the Agent Can Do
+##  Action Space — What the Agent Can Do
 
 The agent picks **one action per step**:
 
@@ -113,7 +112,7 @@ The agent picks **one action per step**:
 
 ---
 
-## 🏆 Reward Function — Feedback at Every Step
+##  Reward Function — Feedback at Every Step
 
 The reward is **dense**: the agent receives feedback after every action, not just at the end.
 
@@ -137,7 +136,7 @@ final_score      = min(1.0, base_score + efficiency_bonus)
 
 ---
 
-## 🎯 Tasks — Three Levels of Difficulty
+##  Tasks — Three Levels of Difficulty
 
 ### Task 1: Easy — Basic Spoilage Control
 | Property | Value |
@@ -184,7 +183,7 @@ final_score      = min(1.0, base_score + efficiency_bonus)
 
 ---
 
-## 📊 Graders — Programmatic Scoring (0.0 to 1.0)
+##  Graders — Programmatic Scoring (0.0 to 1.0)
 
 Each task has a deterministic grader at `POST /grade`:
 
@@ -199,14 +198,14 @@ def grade(self) -> float:
 ```
 
 **Grading is:**
-- ✅ **Deterministic** — same episode state always gives the same score
-- ✅ **Reproducible** — no randomness in the scoring logic
-- ✅ **Incremental** — task_score updates every step (not just at end)
-- ✅ **Partial credit** — saving 70% of yield scores 0.70, not 0
+-  **Deterministic** — same episode state always gives the same score
+-  **Reproducible** — no randomness in the scoring logic
+-  **Incremental** — task_score updates every step (not just at end)
+-  **Partial credit** — saving 70% of yield scores 0.70, not 0
 
 ---
 
-## 🌏 Real-World Data
+##  Real-World Data
 
 All data is based on actual Indian agricultural markets:
 
@@ -232,7 +231,7 @@ All data is based on actual Indian agricultural markets:
 
 ---
 
-## 🔌 API Endpoints
+##  API Endpoints
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
@@ -249,7 +248,7 @@ All data is based on actual Indian agricultural markets:
 
 ---
 
-## 🛠️ Setup & Usage
+##  Setup & Usage
 
 ### Docker (local)
 
@@ -292,20 +291,20 @@ curl -X POST "http://localhost:7860/grade"
 
 ---
 
-## 📈 Baseline Performance Scores
+##  Baseline Performance Scores
 
 Measured with `gpt-4o-mini` as the agent:
 
 | Task | Score | Threshold | Status |
 |------|-------|-----------|--------|
-| easy | ~0.87 | 0.80 | ✅ PASS |
-| medium | ~0.63 | 0.60 | ✅ PASS |
-| hard | ~0.42 | 0.40 | ✅ PASS |
+| easy | ~0.87 | 0.80 |  PASS |
+| medium | ~0.63 | 0.60 |  PASS |
+| hard | ~0.42 | 0.40 | PASS |
 | **Average** | **~0.64** | — | — |
 
 ---
 
-## 📁 Project Structure
+##  Project Structure
 
 ```
 freshchain-env/
@@ -327,7 +326,7 @@ freshchain-env/
 
 ---
 
-## 🚀 Deploy to Hugging Face Spaces
+##  Deploy to Hugging Face Spaces
 
 1. Create a new Space at huggingface.co/spaces
 2. Set SDK to `Docker`
