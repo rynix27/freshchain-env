@@ -297,7 +297,7 @@ def main():
     for task_id, score in scores.items():
         bar = "█" * int(score * 20) + "░" * (20 - int(score * 20))
         threshold = thresholds[task_id]
-        status = "✅ PASS" if score >= threshold else "❌ FAIL"
+        status = " PASS" if score >= threshold else " FAIL"
         print(f"  {task_id:8s} | {score:.3f} | {bar} | {status}")
 
     avg = sum(scores.values()) / len(scores)
