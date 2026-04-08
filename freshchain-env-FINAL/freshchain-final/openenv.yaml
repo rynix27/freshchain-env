@@ -1,0 +1,263 @@
+name: freshchain-env
+version: "1.0.0"
+description: >
+  FreshChain Post-Harvest Yield Loss Prevention Environment.
+  An OpenEnv-compatible RL environment where an AI agent acts as a cold-chain
+  logistics coordinator, making real-time decisions to prevent post-harvest
+  produce spoilage across Indian agricultural supply chains.
+  
+  India loses 30-40% of fruits & vegetables post-harvest (~92,000 crore INR/year).
+  This environment models that problem: an agent that learns better dispatch,
+  storage, and routing decisions can meaningfully reduce these losses at scale.
+
+author: "FreshChain Team"
+license: MIT
+tags:
+  - openenv
+  - agriculture
+  - supply-chain
+  - post-harvest
+  - india
+  - apmc
+  - cold-chain
+  - food-security
+  - real-world
+
+# ─────────────────────────────────────────────
+# TASKS — 3 tasks, easy → medium → hard
+# ─────────────────────────────────────────────
+tasks:
+  - id: easy
+    description: >
+      Basic spoilage control. Single batch, one truck.
+      The agent must dispatch the batch before spoilage_risk reaches 1.0.
+      Teaches the core dispatch-or-wait decision.
+    difficulty: easy
+    max_steps: 5
+    num_batches: 1
+    num_trucks: 1
+    special_events: none
+    objective: "Save the single batch by dispatching it promptly"
+    grader_threshold: 0.80
+    expected_agent_score: "0.80–1.00"
+
+  - id: medium
+    description: >
+      Multi-batch prioritization with a truck breakdown event.
+      3 batches, 2 trucks, but at step 3 one truck breaks down.
+      The agent must identify the highest-risk batches and dispatch them first.
+      Tests: prioritization under resource constraints.
+    difficulty: medium
+    max_steps: 10
+    num_batches: 3
+    num_trucks: 2
+    special_events: "truck_breakdown_at_step_3"
+    objective: "Dispatch highest-risk batches before truck T01 breaks down at step 3"
+    grader_threshold: 0.60
+    expected_agent_score: "0.55–0.75"
+
+  - id: hard
+    description: >
+      Full logistics challenge. 6 batches, 2 trucks, truck breakdown, AND
+      real-time price volatility across APMC markets. Spoilage cascade risk
+      if low-priority batches age while agent focuses elsewhere.
+      Tests: multi-objective optimization under dynamic uncertainty.
+    difficulty: hard
+    max_steps: 15
+    num_batches: 6
+    num_trucks: 2
+    special_events: "truck_breakdown_at_step_3 + price_volatility_every_step"
+    objective: "Maximize yield saved while adapting to price changes and breakdown"
+    grader_threshold: 0.40
+    expected_agent_score: "0.35–0.55"
+
+# ─────────────────────────────────────────────
+# OBSERVATION SPACE
+# What the agent SEES each step
+# ─────────────────────────────────────────────
+observation_space:
+  type: object
+  description: "Full warehouse state visible to agent after each action"
+  fields:
+    - name: step
+      type: int
+      description: "Current step number in the episode"
+
+    - name: batches
+      type: "list[BatchInfo]"
+      description: "All produce batches currently in storage"
+      sub_fields:
+        - name: batch_id
+          type: string
+          example: "B001"
+        - name: crop_type
+          type: string
+          example: "tomato"
+          options: [tomato, potato, onion, banana, mango, cauliflower, spinach, carrot]
+        - name: quantity_kg
+          type: float
+          range: [200, 800]
+          description: "Remaining quantity in kg"
+        - name: temperature_c
+          type: float
+          range: [8, 22]
+          description: "Storage temperature. Above 15C accelerates spoilage."
+        - name: humidity_pct
+          type: float
+          range: [55, 85]
+          description: "Humidity %. Above 70% accelerates spoilage."
+        - name: spoilage_risk
+          type: float
+          range: [0.0, 1.0]
+          description: "KEY SIGNAL. 0.0=fresh, 1.0=fully spoiled. Increases every step."
+        - name: days_in_storage
+          type: int
+          description: "How long this batch has been warehoused"
+        - name: market_price_per_kg
+          type: float
+          description: "Current APMC market price in INR/kg (fluctuates in hard task)"
+
+    - name: trucks
+      type: "list[TruckInfo]"
+      description: "All transport trucks"
+      sub_fields:
+        - name: truck_id
+          type: string
+          example: "T01"
+        - name: capacity_kg
+          type: float
+          range: [500, 1000]
+        - name: available
+          type: bool
+          description: "False if truck is in use or broken down"
+        - name: destination
+          type: string
+          description: "Target APMC market (Azadpur Delhi, Vashi Mumbai, Koyambedu Chennai, etc.)"
+
+    - name: total_yield_saved_kg
+      type: float
+      description: "Cumulative kg dispatched to market successfully"
+
+    - name: total_yield_lost_kg
+      type: float
+      description: "Cumulative kg lost to spoilage"
+
+    - name: storage_capacity_used_pct
+      type: float
+      range: [0, 100]
+
+    - name: message
+      type: string
+      description: "Human-readable summary of what happened last step"
+
+    - name: done
+      type: bool
+      description: "True when episode ends"
+
+    - name: reward
+      type: float
+      description: "Reward for the last action taken"
+
+    - name: task_score
+      type: float
+      range: [0.0, 1.0]
+      description: "Running task completion score"
+
+# ─────────────────────────────────────────────
+# ACTION SPACE
+# What the agent CAN DO each step
+# ─────────────────────────────────────────────
+action_space:
+  type: object
+  description: "One action per step"
+  fields:
+    - name: action_type
+      type: string
+      required: true
+      enum: [dispatch, store, reroute, discard]
+      descriptions:
+        dispatch: "Send a batch to market via available truck. Needs: batch_id + truck_id"
+        store: "Wait one step. All batches age, spoilage_risk increases. Needs: nothing"
+        reroute: "Change batch destination to better market. Needs: batch_id + destination"
+        discard: "Write off a spoiled batch. Prevents cascade. Needs: batch_id"
+
+    - name: batch_id
+      type: string
+      optional: true
+      required_for: [dispatch, reroute, discard]
+      example: "B001"
+
+    - name: truck_id
+      type: string
+      optional: true
+      required_for: [dispatch]
+      example: "T01"
+
+    - name: destination
+      type: string
+      optional: true
+      required_for: [reroute]
+      example: "Vashi APMC (Mumbai)"
+
+# ─────────────────────────────────────────────
+# REWARD FUNCTION
+# Feedback at EVERY step (not just at end)
+# ─────────────────────────────────────────────
+reward:
+  type: continuous
+  range: [-0.5, 2.0]
+  description: >
+    Reward is given at every step to provide dense feedback throughout the trajectory.
+    This is NOT just a final score — every action is evaluated.
+
+  breakdown:
+    dispatch_success:
+      formula: "(dispatched_kg / initial_total_kg) * 2.0"
+      bonus: "+0.2 to +0.3 if batch had spoilage_risk > 0.6 (urgency bonus)"
+      range: [0.1, 2.3]
+      description: "Core positive reward — saving yield is the primary goal"
+
+    spoilage_event:
+      value: -0.2
+      description: "Per-step penalty when any batch spoils (risk reaches 1.0)"
+
+    store_action:
+      value: -0.05
+      description: "Small penalty for waiting — time has a cost"
+
+    invalid_action:
+      value: -0.15
+      description: "Penalty for referencing a non-existent batch or unavailable truck"
+
+    unknown_action:
+      value: -0.1
+      description: "Penalty for unrecognized action_type"
+
+    discard_high_risk:
+      value: +0.05
+      description: "Small reward for discarding batch with spoilage_risk > 0.75 (prevents cascade)"
+
+    discard_low_risk:
+      value: -0.3
+      description: "Penalty for discarding a healthy batch unnecessarily"
+
+    reroute:
+      value: +0.1
+      description: "Small reward for rerouting (finding better market price)"
+
+  grader_formula: >
+    final_score = min(1.0, (yield_saved / (yield_saved + yield_lost)) + efficiency_bonus)
+    efficiency_bonus = max(0, (max_steps - steps_used) / max_steps) * 0.1
+
+# ─────────────────────────────────────────────
+# DEPLOYMENT
+# ─────────────────────────────────────────────
+docker:
+  port: 7860
+  health_endpoint: /health
+  image_name: freshchain-env
+
+huggingface:
+  space_sdk: docker
+  port: 7860
+  tags: [openenv, agriculture, supply-chain, post-harvest, india]
