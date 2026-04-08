@@ -102,9 +102,11 @@ def run_task(task_id: str, max_steps: int = 20) -> float:
     print(f"  Initial trucks:  {len(obs.get('trucks', []))}", flush=True)
 
     # ── REQUIRED: START block ──
-    print(f"[START] task={task_id}", flush=True)
+    print(f"[START] task={task_id} env=freshchain_env model={MODEL_NAME}", flush=True)
 
     current_step = 0
+    rewards_list = []
+    
     for step in range(max_steps):
         if obs.get("done"):
             break
@@ -114,6 +116,8 @@ def run_task(task_id: str, max_steps: int = 20) -> float:
         # Ask LLM for action
         obs_str = json.dumps(obs, indent=2)
 
+        action = None
+        error_msg = "null"
         try:
             response = client.chat.completions.create(
                 model=MODEL_NAME,
@@ -136,14 +140,22 @@ def run_task(task_id: str, max_steps: int = 20) -> float:
         except json.JSONDecodeError:
             print(f"  Step {current_step}: LLM gave invalid JSON, defaulting to store", flush=True)
             action = {"action_type": "store"}
+            error_msg = "invalid_json"
         except Exception as e:
             print(f"  Step {current_step}: LLM error ({e}), defaulting to store", flush=True)
             action = {"action_type": "store"}
+            error_msg = f"llm_error_omitted"
 
         # Execute action
-        result = env_step(action)
-        obs = result.get("observation", result)
-        reward = result.get("reward", 0.0)
+        try:
+            result = env_step(action)
+            obs = result.get("observation", result)
+            reward = result.get("reward", 0.0)
+        except Exception as e:
+            reward = 0.0
+            error_msg = "environment_step_error"
+
+        rewards_list.append(reward)
 
         print(f"  Step {current_step}: {action.get('action_type', '?')} "
               f"| reward={reward:.3f} "
@@ -152,7 +164,10 @@ def run_task(task_id: str, max_steps: int = 20) -> float:
         print(f"           {obs.get('message', '')[:80]}", flush=True)
 
         # ── REQUIRED: STEP block ──
-        print(f"[STEP] step={current_step} reward={reward:.4f}", flush=True)
+        # Fix: Now securely emits action, done, and error in lowercase exactly as required.
+        action_json_str = json.dumps(action).replace('\n', '')
+        done_str = str(obs.get('done', False)).lower()
+        print(f"[STEP] step={current_step} action={action_json_str} reward={reward:.4f} done={done_str} error={error_msg}", flush=True)
 
         if obs.get("done"):
             break
@@ -167,7 +182,10 @@ def run_task(task_id: str, max_steps: int = 20) -> float:
     print(f"  Yield saved: {saved:.1f}kg | Yield lost: {lost:.1f}kg", flush=True)
 
     # ── REQUIRED: END block ──
-    print(f"[END] task={task_id} score={score:.4f} steps={current_step}", flush=True)
+    # Fix: Added success and rewards lists so it passes regex format checks
+    success_str = str(score >= 0.70).lower()  # Generic threshold
+    rewards_str = ",".join(f"{r:.4f}" for r in rewards_list)
+    print(f"[END] success={success_str} steps={current_step} score={score:.4f} rewards={rewards_str}", flush=True)
 
     return score
 
@@ -197,9 +215,9 @@ def main():
         print("ERROR: Environment server not reachable at", ENV_BASE_URL, flush=True)
         # Emit fallback structured blocks so the validator doesn't fail on parsing
         for task_id in ["easy", "medium", "hard"]:
-            print(f"[START] task={task_id}", flush=True)
-            print(f"[STEP] step=1 reward=0.0000", flush=True)
-            print(f"[END] task={task_id} score=0.0000 steps=1", flush=True)
+            print(f"[START] task={task_id} env=freshchain_env model={MODEL_NAME}", flush=True)
+            print(f"[STEP] step=1 action={{\"action_type\":\"store\"}} reward=0.00 done=true error=unreachable", flush=True)
+            print(f"[END] success=false steps=1 score=0.000 rewards=0.0", flush=True)
         return
 
     scores = {}
